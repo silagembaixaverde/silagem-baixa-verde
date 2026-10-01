@@ -922,7 +922,7 @@ function expenses(){
    <form id="gf">
      <div class="field"><label>Data do gasto</label><input name="date" type="date" value="${today()}" required></div>
      <div class="field"><label>Categoria</label><select name="category"><option>Embalagem</option><option>Mão de obra</option><option>Lacres</option><option>Gasolina</option><option>Fita</option><option>Milho</option><option>Manutenção</option><option>Outros</option></select></div>
-     <div class="field"><label>Fornecedor / Funcionário</label><input name="supplier"></div>
+     <div class="field expense-supplier-field"><label>Fornecedor / Funcionário</label><input name="supplier" id="expenseSupplier" autocomplete="off" placeholder="Toque ou digite para buscar"><div id="expenseSupplierSuggestions" class="autocomplete-list"></div></div>
      <div class="field"><label>Carga</label><input name="lot"></div>
      <div class="field"><label>Quantidade</label><input name="quantity" type="number" step=".01" value="1"></div>
      <div class="field"><label>Valor total</label><input name="total" type="number" step=".01" required></div>
@@ -956,6 +956,37 @@ function expenses(){
  const dateEl=document.getElementById('expensePaidDate');
  const form=document.getElementById('gf');
  const saveBtn=document.getElementById('sg');
+
+ const supplierInput=document.getElementById('expenseSupplier');
+ const supplierBox=document.getElementById('expenseSupplierSuggestions');
+ const supplierNames=[...new Set([
+   ...db.expenses.map(e=>String(e.supplier||'').trim()),
+   ...db.lots.map(l=>String(l.supplier||'').trim()),
+   ...db.operators.filter(o=>o.active!==false).map(o=>String(o.name||'').trim()),
+   ...db.customers.filter(c=>/fornec|funcion/i.test(String(c.type||''))).map(c=>String(c.name||'').trim())
+ ].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+
+ function drawSupplierSuggestions(){
+   const q=String(supplierInput.value||'').trim().toLocaleLowerCase('pt-BR');
+   const matches=supplierNames.filter(n=>!q||n.toLocaleLowerCase('pt-BR').includes(q)).slice(0,12);
+   supplierBox.innerHTML=matches.length
+     ? matches.map(n=>`<button type="button" data-value="${esc(n)}">${esc(n)}</button>`).join('')
+     : `<div class="autocomplete-empty">Nenhum nome encontrado</div>`;
+   supplierBox.classList.add('open');
+   supplierBox.querySelectorAll('button').forEach(btn=>{
+     btn.onclick=()=>{
+       supplierInput.value=btn.dataset.value||'';
+       supplierBox.classList.remove('open');
+       supplierInput.focus();
+     };
+   });
+ }
+ supplierInput.addEventListener('focus',drawSupplierSuggestions);
+ supplierInput.addEventListener('input',drawSupplierSuggestions);
+ supplierInput.addEventListener('click',drawSupplierSuggestions);
+ document.addEventListener('click',e=>{
+   if(!e.target.closest('.expense-supplier-field'))supplierBox.classList.remove('open');
+ },{once:false});
 
  function togglePaymentFields(){
    const isPending=statusEl.value==='A pagar';
