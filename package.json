@@ -1,0 +1,8 @@
+{
+  "name": "silagem-baixa-verde-web",
+  "private": true,
+  "version": "1.2.0",
+  "scripts": {
+    "build": "node build.cjs"
+  }
+}

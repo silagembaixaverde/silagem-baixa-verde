@@ -1,0 +1,18 @@
+{
+  "name": "Silagem Baixa Verde",
+  "short_name": "Silagem",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f3",
+  "theme_color": "#1f6b2a",
+  "description": "Gestão de vendas, gastos, estoque, cargas, clientes, orçamentos e recibos.",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
