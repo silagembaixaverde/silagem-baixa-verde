@@ -15,18 +15,18 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}.top{po
 <body>
 <div id="cloudLogin" class="overlay">
  <div class="login">
-  <img class="logo" src="icon.svg" alt="Logo">
+  <img class="logo" src="logo.svg" alt="Logo">
   <h2 style="text-align:center;margin-top:10px">Silagem Baixa Verde</h2>
   <p class="muted" style="text-align:center">Acesse com a mesma conta usada no computador.</p>
   <div class="field"><label>E-mail</label><input id="email" type="email" autocomplete="username"></div>
   <div class="field"><label>Senha</label><input id="password" type="password" autocomplete="current-password"></div>
-  <button id="loginBtn" class="btn primary full">Entrar</button>
+  <button id="loginBtn" class="btn primary full">Entrar e sincronizar</button>
   <div id="loginMsg" class="muted" style="margin-top:10px"></div>
  </div>
 </div>
 <div id="operatorLogin" class="overlay hidden">
  <div class="login">
-  <img class="logo" src="icon.svg" alt="Logo">
+  <img class="logo" src="logo.svg" alt="Logo">
   <h2 style="text-align:center">Operador</h2>
   <div class="field"><label>Operador</label><select id="operatorSelect"></select></div>
   <div class="field"><label>PIN</label><input id="operatorPin" type="password" inputmode="numeric"></div>
@@ -45,12 +45,44 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}.top{po
  <button data-page="more">Mais</button>
 </nav>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL='https://wybcdxnexixdlweicono.supabase.co';
 const SUPABASE_KEY='sb_publishable_HjjLAFUOvfjp3vExS6b4BQ_SIaXhMpz';
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 let user=null,db=null,currentOperatorId=null,channel=null,saveTimer=null,currentPage='dashboard';
+let session=JSON.parse(localStorage.getItem('sbv-cloud-session')||'null');
+
+async function authRequest(path, body){
+ const r=await fetch(SUPABASE_URL+'/auth/v1/'+path,{
+   method:'POST',
+   headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
+   body:JSON.stringify(body||{})
+ });
+ const data=await r.json().catch(()=>({}));
+ if(!r.ok) throw new Error(data.msg||data.error_description||data.message||('Erro '+r.status));
+ return data;
+}
+function saveSession(s){
+ session=s||null;
+ if(s)localStorage.setItem('sbv-cloud-session',JSON.stringify(s));
+ else localStorage.removeItem('sbv-cloud-session');
+}
+async function refreshSession(){
+ if(!session?.refresh_token)throw new Error('Sessão expirada');
+ const data=await authRequest('token?grant_type=refresh_token',{refresh_token:session.refresh_token});
+ saveSession(data);
+ return data;
+}
+async function apiFetch(path,opts={}){
+ if(!session?.access_token)throw new Error('Sem sessão');
+ const headers={apikey:SUPABASE_KEY,Authorization:'Bearer '+session.access_token,...(opts.headers||{})};
+ let r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{...opts,headers});
+ if(r.status===401&&session?.refresh_token){
+   await refreshSession();
+   headers.Authorization='Bearer '+session.access_token;
+   r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{...opts,headers});
+ }
+ return r;
+}
 const el=id=>document.getElementById(id);
 const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const today=()=>new Date().toISOString().slice(0,10);
@@ -66,23 +98,34 @@ function ensureDb(x){
 function status(t,bad=false){el('syncStatus').textContent=t;el('syncStatus').style.color=bad?'#ffb5ae':''}
 async function loadState(){
  status('Sincronizando...');
- const r=await sb.from('app_state').select('payload').eq('user_id',user.id).maybeSingle();
- if(r.error){status('Erro na nuvem',true);throw r.error}
- db=ensureDb(r.data&&r.data.payload?r.data.payload:{});
- if(!r.data)await saveNow();
+ const r=await apiFetch('app_state?select=payload&user_id=eq.'+encodeURIComponent(user.id),{headers:{Accept:'application/json'}});
+ if(!r.ok){status('Erro na nuvem',true);throw new Error('Falha ao carregar dados');}
+ const rows=await r.json();
+ const row=rows[0]||null;
+ db=ensureDb(row&&row.payload?row.payload:{});
+ if(!row)await saveNow();
  status('Sincronizado');
 }
 function save(){clearTimeout(saveTimer);status('Salvando...');saveTimer=setTimeout(saveNow,400)}
 async function saveNow(){
  if(!user||!db)return;
- const r=await sb.from('app_state').upsert({user_id:user.id,payload:db,updated_at:new Date().toISOString()},{onConflict:'user_id'});
- if(r.error){status('Erro ao salvar',true);console.error(r.error)}else status('Sincronizado');
+ const r=await apiFetch('app_state?on_conflict=user_id',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+   body:JSON.stringify({user_id:user.id,payload:db,updated_at:new Date().toISOString()})
+ });
+ if(!r.ok){status('Erro ao salvar',true);console.error(await r.text())}else status('Sincronizado');
 }
 function listen(){
- if(channel)sb.removeChannel(channel);
- channel=sb.channel('mobile-'+user.id).on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_state',filter:'user_id=eq.'+user.id},p=>{
-   if(p.new&&p.new.payload){db=ensureDb(p.new.payload);status('Atualizado');render();}
- }).subscribe();
+ if(channel)clearInterval(channel);
+ channel=setInterval(async()=>{
+   try{
+     const r=await apiFetch('app_state?select=payload&user_id=eq.'+encodeURIComponent(user.id),{headers:{Accept:'application/json'}});
+     if(!r.ok)return;
+     const rows=await r.json();
+     if(rows[0]?.payload){db=ensureDb(rows[0].payload);status('Atualizado');render();}
+   }catch(e){}
+ },10000);
 }
 function operator(){return db.operators.find(o=>o.id===currentOperatorId)||null}
 function log(action,details=''){db.activityLog.push({id:uid(),date:today(),time:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),operator_id:currentOperatorId||'',operator_name:operator()?.name||'',action,details});save()}
@@ -97,14 +140,23 @@ el('operatorBtn').onclick=()=>{
  currentOperatorId=o.id;el('operatorLogin').classList.add('hidden');render();
 };
 el('loginBtn').onclick=async()=>{
- el('loginMsg').textContent='Entrando...';
- const r=await sb.auth.signInWithPassword({email:el('email').value.trim(),password:el('password').value});
- if(r.error){el('loginMsg').textContent='Não foi possível entrar: '+r.error.message;return}
- user=r.data.user;el('cloudLogin').classList.add('hidden');
- try{await loadState();listen();showOperator()}catch(e){el('loginMsg').textContent='Erro ao carregar dados.'}
+ const btn=el('loginBtn');
+ const email=el('email').value.trim(),password=el('password').value;
+ if(!email||!password){el('loginMsg').textContent='Informe e-mail e senha.';return}
+ btn.disabled=true;btn.textContent='Entrando...';el('loginMsg').textContent='Conectando à nuvem...';
+ try{
+   const data=await authRequest('token?grant_type=password',{email,password});
+   saveSession(data);user=data.user;
+   el('cloudLogin').classList.add('hidden');
+   await loadState();listen();showOperator();
+ }catch(e){
+   el('loginMsg').textContent='Não foi possível entrar: '+(e?.message||'erro de conexão');
+ }finally{
+   btn.disabled=false;btn.textContent='Entrar e sincronizar';
+ }
 };
 el('password').addEventListener('keydown',e=>{if(e.key==='Enter')el('loginBtn').click()});
-el('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
+el('logoutBtn').onclick=()=>{saveSession(null);location.reload()};
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{currentPage=b.dataset.page;render()});
 function setActive(){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===currentPage))}
 function metric(label,value){return '<div class="metric"><span class="muted">'+esc(label)+'</span><b>'+value+'</b></div>'}
@@ -143,7 +195,7 @@ function receive(id){
  el('app').innerHTML='<div class="card"><h2>Receber pagamento</h2><p><b>'+esc(s.customer)+'</b></p><div class="grid">'+metric('Saldo',money(s.receivable))+metric('Já recebido',money(s.received))+'</div><div class="field"><label>Valor recebido</label><input id="rAmount" type="text" inputmode="decimal" placeholder="Ex.: 150,00"></div><div class="field"><label>Data</label><input id="rDate" type="date" value="'+today()+'"></div><div class="field"><label>Forma</label><select id="rMethod"><option>Pix</option><option>Dinheiro</option><option>TED</option><option>Débito</option><option>Crédito</option><option>Outro</option></select></div><div class="actions"><button id="rBack" class="btn secondary">Voltar</button><button id="rSave" class="btn primary">Confirmar</button></div></div>';
  el('rBack').onclick=()=>{currentPage='receivables';render()};
  el('rSave').onclick=()=>{
-  let raw=el('rAmount').value.trim().replace(/./g,'').replace(',','.'),amount=Number(raw);
+  let raw=el('rAmount').value.trim().replace(/\./g,'').replace(',','.'),amount=Number(raw);
   if(!Number.isFinite(amount)||amount<=0||amount>Number(s.receivable||0)+.009)return alert('Informe um valor válido até '+money(s.receivable)+'.');
   s.received=Number(s.received||0)+amount;s.receivable=Math.max(Number(s.total||0)-s.received,0);s.status=s.receivable<=.009?'Recebido':'Pendente';
   s.receipts_log=Array.isArray(s.receipts_log)?s.receipts_log:[];s.receipts_log.push({id:uid(),amount,date:el('rDate').value,method:el('rMethod').value,operator_id:currentOperatorId,operator_name:operator()?.name||''});
@@ -154,7 +206,7 @@ function expenses(){
  const pending=db.expenses.filter(x=>String(x.payment_status||x.payment||'').toLowerCase().includes('pagar'));
  el('app').innerHTML='<div class="card"><h2>Novo gasto</h2><div class="field"><label>Data</label><input id="eDate" type="date" value="'+today()+'"></div><div class="field"><label>Categoria</label><input id="eCat" placeholder="Ex.: combustível"></div><div class="field"><label>Fornecedor / funcionário</label><input id="eSup"></div><div class="field"><label>Valor total</label><input id="eTotal" type="text" inputmode="decimal" placeholder="0,00"></div><div class="field"><label>Situação</label><select id="eStatus"><option>Pago</option><option>A pagar</option></select></div><button id="eSave" class="btn primary full">Salvar gasto</button></div><div class="card"><h3>Pendências</h3><p class="muted">'+pending.length+' gasto(s) a pagar</p></div>';
  el('eSave').onclick=()=>{
-   const total=Number(el('eTotal').value.trim().replace(/./g,'').replace(',','.'));if(!Number.isFinite(total)||total<=0)return alert('Informe o valor.');
+   const total=Number(el('eTotal').value.trim().replace(/\./g,'').replace(',','.'));if(!Number.isFinite(total)||total<=0)return alert('Informe o valor.');
    const st=el('eStatus').value;db.expenses.push({id:uid(),date:el('eDate').value,category:el('eCat').value.trim(),supplier:el('eSup').value.trim(),total,payment_status:st,paid_date:st==='Pago'?el('eDate').value:'',paid_method:'',operator_id:currentOperatorId,operator_name:operator()?.name||''});
    log('Gasto lançado',(el('eCat').value||'Gasto')+' - '+money(total));alert('Gasto salvo.');render();
  };
@@ -171,7 +223,14 @@ function renderMore(which){
  if(which==='inventory'){box.innerHTML='<div class="card"><h3>Estoque</h3><table class="table"><tr><th>Produto</th><th class="right">Saldo</th></tr>'+db.inventory.map(i=>'<tr><td>'+esc(i.product||i.name||'')+'</td><td class="right">'+esc(i.quantity??i.stock??i.balance??0)+'</td></tr>').join('')+'</table></div>'}
 }
 (async()=>{
- const s=await sb.auth.getSession();if(s.data.session){user=s.data.session.user;el('cloudLogin').classList.add('hidden');await loadState();listen();showOperator()}
+ try{
+   if(session?.access_token&&session?.user){
+     user=session.user;el('cloudLogin').classList.add('hidden');
+     await loadState();listen();showOperator();
+   }
+ }catch(e){
+   saveSession(null);user=null;el('cloudLogin').classList.remove('hidden');
+ }
 })();
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
