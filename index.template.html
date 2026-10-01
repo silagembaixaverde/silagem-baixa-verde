@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Silagem Baixa Verde</title>
 <meta name="theme-color" content="#1f6b2a">
 <link rel="manifest" href="manifest.webmanifest">
@@ -20,16 +20,42 @@
   <main>
     <header>
       <button id="menuBtn">☰</button>
-      <div><h1 id="pageTitle">Painel</h1><p id="pageSub"></p></div>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+      <div class="page-head"><h1 id="pageTitle">Painel</h1><p id="pageSub"></p></div>
+      <div class="header-meta" style="margin-left:auto;display:flex;align-items:center;gap:10px">
         <small id="cloudStatus" style="font-weight:700;color:#6d776e">Nuvem</small>
         <div id="operatorBox" style="display:flex;align-items:center;gap:8px"></div>
       </div>
-      <button class="primary" onclick="go('sale-new')" style="margin-left:12px">+ Nova venda</button>
+      <button class="primary desktop-new-sale" onclick="go('sale-new')" style="margin-left:12px">+ Nova venda</button>
     </header>
     <section id="content"></section>
   </main>
 </div>
+
+<nav id="mobileNav" class="mobile-nav" aria-label="Navegação principal">
+  <button data-mobile-page="dashboard" onclick="go('dashboard')"><span>⌂</span><small>Painel</small></button>
+  <button data-mobile-page="sale-new" onclick="go('sale-new')"><span>＋</span><small>Venda</small></button>
+  <button data-mobile-page="receivables" onclick="go('receivables')"><span>R$</span><small>Receber</small></button>
+  <button data-mobile-page="expenses" onclick="go('expenses')"><span>−</span><small>Gastos</small></button>
+  <button data-mobile-page="more" onclick="openMobileMore()"><span>•••</span><small>Mais</small></button>
+</nav>
+
+<div id="mobileMoreBackdrop" class="mobile-more-backdrop" onclick="closeMobileMore()"></div>
+<section id="mobileMore" class="mobile-more" aria-label="Mais opções">
+  <div class="mobile-more-head"><strong>Mais opções</strong><button class="secondary" onclick="closeMobileMore()">Fechar</button></div>
+  <div class="mobile-more-grid">
+    <button onclick="go('sales')">Histórico</button>
+    <button onclick="go('customers')">Clientes</button>
+    <button onclick="go('inventory')">Estoque</button>
+    <button onclick="go('lots')">Cargas / Lotes</button>
+    <button onclick="go('reports')">Relatórios</button>
+    <button onclick="go('quotes')">Orçamentos</button>
+    <button onclick="go('receipts')">Recibos</button>
+    <button onclick="go('products')">Produtos</button>
+    <button onclick="go('activity')">Operadores</button>
+    <button onclick="go('settings')">Configurações</button>
+  </div>
+</section>
+
 <script src="data.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
