@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6b2a">
+<title>Silagem Baixa Verde</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{--g:#1f6b2a;--g2:#2f8c39;--bg:#f4f7f3;--card:#fff;--text:#172018;--muted:#6a756c;--line:#dce5dc;--danger:#a52319}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}.hidden{display:none!important}.top{position:sticky;top:0;z-index:8;background:#102615;color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px}.brand{font-weight:800;flex:1}.status{font-size:12px;opacity:.85}.wrap{max-width:900px;margin:auto;padding:14px 14px 90px}.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px;margin-bottom:12px;box-shadow:0 2px 10px #0000000c}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric{background:#f8faf8;border:1px solid var(--line);border-radius:12px;padding:12px}.metric b{display:block;font-size:20px;margin-top:3px}.muted{color:var(--muted);font-size:13px}.btn{border:0;border-radius:11px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:var(--g);color:#fff}.secondary{background:#e9f1e9;color:#173a1b}.danger{background:#f9e8e6;color:#8f2017}.full{width:100%}.field{margin:10px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}.field input,.field select,.field textarea{width:100%;padding:11px;border:1px solid #cbd7cc;border-radius:10px;background:#fff}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);z-index:20}.nav button{border:0;background:#fff;padding:10px 4px;font-size:11px}.nav button.active{color:var(--g);font-weight:800}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.right{text-align:right}.pill{display:inline-block;padding:3px 7px;border-radius:999px;background:#eef4ee;font-size:11px}.overlay{position:fixed;inset:0;background:#0f2614;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}.login{width:min(430px,100%);background:#fff;border-radius:18px;padding:24px}.logo{width:88px;height:88px;margin:auto;display:block}.actions{display:flex;gap:8px;margin-top:14px}.actions>*{flex:1}h2{margin:0 0 12px}h3{margin:0 0 8px}@media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.nav{left:50%;transform:translateX(-50%);max-width:900px;border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div id="cloudLogin" class="overlay">
+ <div class="login">
+  <img class="logo" src="icon.svg" alt="Logo">
+  <h2 style="text-align:center;margin-top:10px">Silagem Baixa Verde</h2>
+  <p class="muted" style="text-align:center">Acesse com a mesma conta usada no computador.</p>
+  <div class="field"><label>E-mail</label><input id="email" type="email" autocomplete="username"></div>
+  <div class="field"><label>Senha</label><input id="password" type="password" autocomplete="current-password"></div>
+  <button id="loginBtn" class="btn primary full">Entrar</button>
+  <div id="loginMsg" class="muted" style="margin-top:10px"></div>
+ </div>
+</div>
+<div id="operatorLogin" class="overlay hidden">
+ <div class="login">
+  <img class="logo" src="icon.svg" alt="Logo">
+  <h2 style="text-align:center">Operador</h2>
+  <div class="field"><label>Operador</label><select id="operatorSelect"></select></div>
+  <div class="field"><label>PIN</label><input id="operatorPin" type="password" inputmode="numeric"></div>
+  <button id="operatorBtn" class="btn primary full">Entrar</button>
+  <div id="operatorMsg" class="muted" style="margin-top:10px"></div>
+ </div>
+</div>
+
+<header class="top"><div class="brand">Silagem Baixa Verde</div><div id="syncStatus" class="status">Nuvem</div><button id="logoutBtn" class="btn secondary" style="padding:7px 9px">Sair</button></header>
+<main id="app" class="wrap"></main>
+<nav class="nav">
+ <button data-page="dashboard">Painel</button>
+ <button data-page="sale">Venda</button>
+ <button data-page="receivables">Receber</button>
+ <button data-page="expenses">Gastos</button>
+ <button data-page="more">Mais</button>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://wybcdxnexixdlweicono.supabase.co';
+const SUPABASE_KEY='sb_publishable_HjjLAFUOvfjp3vExS6b4BQ_SIaXhMpz';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+let user=null,db=null,currentOperatorId=null,channel=null,saveTimer=null,currentPage='dashboard';
+const el=id=>document.getElementById(id);
+const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const today=()=>new Date().toISOString().slice(0,10);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function ensureDb(x){
+ x=x&&typeof x==='object'?x:{};
+ ['products','customers','sales','inventory','lots','expenses','quotes','receipts','operators','activityLog'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});
+ if(!x.operators.length)x.operators=[{id:'op-admin',name:'Administrador',pin:'1234',active:true}];
+ if(!x.settings||typeof x.settings!=='object')x.settings={};
+ return x;
+}
+function status(t,bad=false){el('syncStatus').textContent=t;el('syncStatus').style.color=bad?'#ffb5ae':''}
+async function loadState(){
+ status('Sincronizando...');
+ const r=await sb.from('app_state').select('payload').eq('user_id',user.id).maybeSingle();
+ if(r.error){status('Erro na nuvem',true);throw r.error}
+ db=ensureDb(r.data&&r.data.payload?r.data.payload:{});
+ if(!r.data)await saveNow();
+ status('Sincronizado');
+}
+function save(){clearTimeout(saveTimer);status('Salvando...');saveTimer=setTimeout(saveNow,400)}
+async function saveNow(){
+ if(!user||!db)return;
+ const r=await sb.from('app_state').upsert({user_id:user.id,payload:db,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+ if(r.error){status('Erro ao salvar',true);console.error(r.error)}else status('Sincronizado');
+}
+function listen(){
+ if(channel)sb.removeChannel(channel);
+ channel=sb.channel('mobile-'+user.id).on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_state',filter:'user_id=eq.'+user.id},p=>{
+   if(p.new&&p.new.payload){db=ensureDb(p.new.payload);status('Atualizado');render();}
+ }).subscribe();
+}
+function operator(){return db.operators.find(o=>o.id===currentOperatorId)||null}
+function log(action,details=''){db.activityLog.push({id:uid(),date:today(),time:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),operator_id:currentOperatorId||'',operator_name:operator()?.name||'',action,details});save()}
+function showOperator(){
+ const active=db.operators.filter(o=>o.active!==false);
+ el('operatorSelect').innerHTML=active.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('');
+ el('operatorLogin').classList.remove('hidden');
+}
+el('operatorBtn').onclick=()=>{
+ const o=db.operators.find(x=>x.id===el('operatorSelect').value);
+ if(!o||String(o.pin)!==String(el('operatorPin').value)){el('operatorMsg').textContent='PIN incorreto.';return}
+ currentOperatorId=o.id;el('operatorLogin').classList.add('hidden');render();
+};
+el('loginBtn').onclick=async()=>{
+ el('loginMsg').textContent='Entrando...';
+ const r=await sb.auth.signInWithPassword({email:el('email').value.trim(),password:el('password').value});
+ if(r.error){el('loginMsg').textContent='Não foi possível entrar: '+r.error.message;return}
+ user=r.data.user;el('cloudLogin').classList.add('hidden');
+ try{await loadState();listen();showOperator()}catch(e){el('loginMsg').textContent='Erro ao carregar dados.'}
+};
+el('password').addEventListener('keydown',e=>{if(e.key==='Enter')el('loginBtn').click()});
+el('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{currentPage=b.dataset.page;render()});
+function setActive(){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===currentPage))}
+function metric(label,value){return '<div class="metric"><span class="muted">'+esc(label)+'</span><b>'+value+'</b></div>'}
+function render(){if(!db||!currentOperatorId)return;setActive();({dashboard,sale,receivables,expenses,more}[currentPage]||dashboard)()}
+function dashboard(){
+ const m=today().slice(0,7);
+ const sales=db.sales.filter(s=>String(s.date||'').slice(0,7)===m);
+ const exp=db.expenses.filter(x=>String(x.date||'').slice(0,7)===m);
+ const fat=sales.reduce((a,s)=>a+Number(s.total||0),0), rec=sales.reduce((a,s)=>a+Number(s.received||0),0), due=db.sales.reduce((a,s)=>a+Number(s.receivable||0),0), gastos=exp.reduce((a,x)=>a+Number(x.total||0),0);
+ el('app').innerHTML='<div class="card"><h2>Painel</h2><div class="muted">'+esc(operator()?.name||'')+'</div></div><div class="grid">'+metric('Faturamento mês',money(fat))+metric('Recebido mês',money(rec))+metric('A receber',money(due))+metric('Gastos mês',money(gastos))+'</div><div class="card"><h3>Resumo</h3><p>Vendas no mês: <b>'+sales.length+'</b></p><p>Clientes: <b>'+db.customers.length+'</b></p><p>Produtos: <b>'+db.products.length+'</b></p></div>';
+}
+function customerOptions(){return db.customers.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(c=>'<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>').join('')}
+function productOptions(){return db.products.map(p=>'<option value="'+esc(p.name)+'">'+esc(p.name)+'</option>').join('')}
+function sale(){
+ el('app').innerHTML='<div class="card"><h2>Nova venda</h2><div class="field"><label>Data</label><input id="sDate" type="date" value="'+today()+'"></div><div class="field"><label>Cliente</label><input id="sCustomer" list="customersList" placeholder="Nome do cliente"><datalist id="customersList">'+customerOptions()+'</datalist></div><div class="field"><label>Produto</label><select id="sProduct">'+productOptions()+'</select></div><div class="grid"><div class="field"><label>Quantidade</label><input id="sQty" type="number" min="0" step="1"></div><div class="field"><label>Preço unitário</label><input id="sPrice" type="number" min="0" step="0.01"></div></div><div class="grid"><div class="field"><label>Recebido</label><input id="sReceived" type="number" min="0" step="0.01" value="0"></div><div class="field"><label>Frete cobrado</label><input id="sFreight" type="number" min="0" step="0.01" value="0"></div></div><div class="field"><label>Forma de pagamento</label><select id="sMethod"><option>Pix</option><option>Dinheiro</option><option>Prazo</option><option>Outro</option></select></div><button id="saveSale" class="btn primary full">Salvar venda</button></div>';
+ const fillPrice=()=>{const p=db.products.find(x=>x.name===el('sProduct').value);el('sPrice').value=Number(p?.sale_price||0).toFixed(2)};
+ el('sProduct').onchange=fillPrice;fillPrice();
+ el('saveSale').onclick=()=>{
+   const customer=el('sCustomer').value.trim(), product=el('sProduct').value, qty=Number(el('sQty').value||0), price=Number(el('sPrice').value||0), freight=Number(el('sFreight').value||0), received=Number(el('sReceived').value||0);
+   if(!customer||!product||qty<=0)return alert('Preencha cliente, produto e quantidade.');
+   if(!db.customers.some(c=>String(c.name).toLowerCase()===customer.toLowerCase()))db.customers.push({id:uid(),name:customer});
+   const total=qty*price+freight, due=Math.max(total-received,0);
+   const s={id:uid(),source:'app',date:el('sDate').value,customer,product,quantity:qty,unit_price:price,total,received,receivable:due,status:due<=.009?'Recebido':'Pendente',payment_method:el('sMethod').value,freight_charged:freight,operator_id:currentOperatorId,operator_name:operator()?.name||''};
+   db.sales.push(s);
+   const inv=db.inventory.find(i=>i.product===product||i.name===product);if(inv){if('quantity'in inv)inv.quantity=Number(inv.quantity||0)-qty;if('stock'in inv)inv.stock=Number(inv.stock||0)-qty}
+   log('Venda lançada',customer+' - '+money(total));alert('Venda salva e sincronizada.');currentPage='dashboard';render();
+ };
+}
+function receivables(){
+ const rows=db.sales.filter(s=>Number(s.receivable||0)>0.009).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ el('app').innerHTML='<div class="card"><h2>A receber</h2><div class="muted">'+rows.length+' pendência(s)</div></div>'+rows.map(s=>'<div class="card"><div class="row"><div style="flex:1"><b>'+esc(s.customer)+'</b><div class="muted">'+esc(s.date||'')+' · '+esc(s.product||'')+'</div></div><b>'+money(s.receivable)+'</b></div><div class="actions"><button class="btn primary" data-receive="'+esc(s.id)+'">Receber</button></div></div>').join('');
+ document.querySelectorAll('[data-receive]').forEach(b=>b.onclick=()=>receive(b.dataset.receive));
+}
+function receive(id){
+ const s=db.sales.find(x=>x.id===id);if(!s)return;
+ el('app').innerHTML='<div class="card"><h2>Receber pagamento</h2><p><b>'+esc(s.customer)+'</b></p><div class="grid">'+metric('Saldo',money(s.receivable))+metric('Já recebido',money(s.received))+'</div><div class="field"><label>Valor recebido</label><input id="rAmount" type="text" inputmode="decimal" placeholder="Ex.: 150,00"></div><div class="field"><label>Data</label><input id="rDate" type="date" value="'+today()+'"></div><div class="field"><label>Forma</label><select id="rMethod"><option>Pix</option><option>Dinheiro</option><option>TED</option><option>Débito</option><option>Crédito</option><option>Outro</option></select></div><div class="actions"><button id="rBack" class="btn secondary">Voltar</button><button id="rSave" class="btn primary">Confirmar</button></div></div>';
+ el('rBack').onclick=()=>{currentPage='receivables';render()};
+ el('rSave').onclick=()=>{
+  let raw=el('rAmount').value.trim().replace(/./g,'').replace(',','.'),amount=Number(raw);
+  if(!Number.isFinite(amount)||amount<=0||amount>Number(s.receivable||0)+.009)return alert('Informe um valor válido até '+money(s.receivable)+'.');
+  s.received=Number(s.received||0)+amount;s.receivable=Math.max(Number(s.total||0)-s.received,0);s.status=s.receivable<=.009?'Recebido':'Pendente';
+  s.receipts_log=Array.isArray(s.receipts_log)?s.receipts_log:[];s.receipts_log.push({id:uid(),amount,date:el('rDate').value,method:el('rMethod').value,operator_id:currentOperatorId,operator_name:operator()?.name||''});
+  log('Recebimento lançado',s.customer+' - '+money(amount));alert('Recebimento salvo.');currentPage='receivables';render();
+ };
+}
+function expenses(){
+ const pending=db.expenses.filter(x=>String(x.payment_status||x.payment||'').toLowerCase().includes('pagar'));
+ el('app').innerHTML='<div class="card"><h2>Novo gasto</h2><div class="field"><label>Data</label><input id="eDate" type="date" value="'+today()+'"></div><div class="field"><label>Categoria</label><input id="eCat" placeholder="Ex.: combustível"></div><div class="field"><label>Fornecedor / funcionário</label><input id="eSup"></div><div class="field"><label>Valor total</label><input id="eTotal" type="text" inputmode="decimal" placeholder="0,00"></div><div class="field"><label>Situação</label><select id="eStatus"><option>Pago</option><option>A pagar</option></select></div><button id="eSave" class="btn primary full">Salvar gasto</button></div><div class="card"><h3>Pendências</h3><p class="muted">'+pending.length+' gasto(s) a pagar</p></div>';
+ el('eSave').onclick=()=>{
+   const total=Number(el('eTotal').value.trim().replace(/./g,'').replace(',','.'));if(!Number.isFinite(total)||total<=0)return alert('Informe o valor.');
+   const st=el('eStatus').value;db.expenses.push({id:uid(),date:el('eDate').value,category:el('eCat').value.trim(),supplier:el('eSup').value.trim(),total,payment_status:st,paid_date:st==='Pago'?el('eDate').value:'',paid_method:'',operator_id:currentOperatorId,operator_name:operator()?.name||''});
+   log('Gasto lançado',(el('eCat').value||'Gasto')+' - '+money(total));alert('Gasto salvo.');render();
+ };
+}
+function more(){
+ el('app').innerHTML='<div class="card"><h2>Mais</h2><div class="row"><button class="btn secondary" data-more="sales">Histórico</button><button class="btn secondary" data-more="customers">Clientes</button><button class="btn secondary" data-more="inventory">Estoque</button><button class="btn secondary" data-more="sync">Sincronizar</button></div></div><div id="moreContent"></div>';
+ document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>renderMore(b.dataset.more));
+}
+function renderMore(which){
+ const box=el('moreContent');
+ if(which==='sync'){saveNow();box.innerHTML='<div class="card">Sincronização enviada.</div>';return}
+ if(which==='sales'){const a=db.sales.slice().sort((x,y)=>String(y.date).localeCompare(String(x.date))).slice(0,100);box.innerHTML='<div class="card"><h3>Últimas vendas</h3><table class="table"><tr><th>Data</th><th>Cliente</th><th class="right">Total</th></tr>'+a.map(s=>'<tr><td>'+esc(s.date||'')+'</td><td>'+esc(s.customer||'')+'</td><td class="right">'+money(s.total)+'</td></tr>').join('')+'</table></div>';return}
+ if(which==='customers'){box.innerHTML='<div class="card"><h3>Clientes</h3>'+db.customers.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(c=>'<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>'+esc(c.name)+'</b><div class="muted">'+esc(c.phone||'')+'</div></div>').join('')+'</div>';return}
+ if(which==='inventory'){box.innerHTML='<div class="card"><h3>Estoque</h3><table class="table"><tr><th>Produto</th><th class="right">Saldo</th></tr>'+db.inventory.map(i=>'<tr><td>'+esc(i.product||i.name||'')+'</td><td class="right">'+esc(i.quantity??i.stock??i.balance??0)+'</td></tr>').join('')+'</table></div>'}
+}
+(async()=>{
+ const s=await sb.auth.getSession();if(s.data.session){user=s.data.session.user;el('cloudLogin').classList.add('hidden');await loadState();listen();showOperator()}
+})();
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
