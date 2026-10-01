@@ -923,7 +923,7 @@ function expenses(){
      <div class="field"><label>Data do gasto</label><input name="date" type="date" value="${today()}" required></div>
      <div class="field"><label>Categoria</label><select name="category"><option>Embalagem</option><option>Mão de obra</option><option>Lacres</option><option>Gasolina</option><option>Fita</option><option>Milho</option><option>Manutenção</option><option>Outros</option></select></div>
      <div class="field expense-supplier-field"><label>Fornecedor / Funcionário</label><input name="supplier" id="expenseSupplier" autocomplete="off" placeholder="Toque ou digite para buscar"><div id="expenseSupplierSuggestions" class="autocomplete-list"></div></div>
-     <div class="field"><label>Carga</label><input name="lot"></div>
+     <div class="field"><label>Carga</label><input name="lot" list="expenseLotList" placeholder="Toque ou digite para buscar"><datalist id="expenseLotList">${db.lots.map(l=>`<option value="${esc(l.lot)}">`).join('')}</datalist></div>
      <div class="field"><label>Quantidade</label><input name="quantity" type="number" step=".01" value="1"></div>
      <div class="field"><label>Valor total</label><input name="total" type="number" step=".01" required></div>
      <div class="field"><label>Situação</label><select name="payment_status" id="expenseStatus"><option value="Pago">Pago</option><option value="A pagar">A pagar</option></select></div>
