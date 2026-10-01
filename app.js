@@ -248,7 +248,9 @@ function applySettings(){
   document.querySelectorAll('.brand small').forEach(i=>i.textContent=companySlogan());
 }
 function renderNav(){nav.innerHTML=navItems.map(([id,t])=>`<button data-page="${id}" onclick="go('${id}')">${t}</button>`).join('')}
-function go(page){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));document.querySelector('.sidebar').classList.remove('open');const map={dashboard,reports,activity,saleNew,receivables,sales,products,expenses,customers,inventory,lots,quotes,receipts,settings};(map[page.replace('-new','New')]||dashboard)()}
+window.openMobileMore=function(){document.getElementById('mobileMore')?.classList.add('open');document.getElementById('mobileMoreBackdrop')?.classList.add('open');document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage==='more'))}
+window.closeMobileMore=function(){document.getElementById('mobileMore')?.classList.remove('open');document.getElementById('mobileMoreBackdrop')?.classList.remove('open')}
+function go(page){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage===page));closeMobileMore();document.querySelector('.sidebar')?.classList.remove('open');const map={dashboard,reports,activity,saleNew,receivables,sales,products,expenses,customers,inventory,lots,quotes,receipts,settings};(map[page.replace('-new','New')]||dashboard)()}
 menuBtn.onclick=()=>document.querySelector('.sidebar').classList.toggle('open');
 function title(t,s=''){pageTitle.textContent=t;pageSub.textContent=s}
 function metric(l,v,n=''){return `<div class="card metric"><div class="label">${l}</div><div class="value">${v}</div><div class="note">${n}</div></div>`}
