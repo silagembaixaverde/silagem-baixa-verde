@@ -243,7 +243,7 @@ function applySettings(){
   document.documentElement.style.setProperty('--g',s.primary_color||'#1f6b2a');
   document.documentElement.style.setProperty('--sidebar',s.sidebar_color||'#102615');
   document.documentElement.style.setProperty('--bg',s.background_color||'#f4f7f3');
-  document.querySelectorAll('.brand img').forEach(i=>i.src=appLogo());
+  document.querySelectorAll('.brand img,.top-logo').forEach(i=>i.src=appLogo());
   document.querySelectorAll('.brand strong').forEach(i=>i.textContent=companyName());
   document.querySelectorAll('.brand small').forEach(i=>i.textContent=companySlogan());
 }
