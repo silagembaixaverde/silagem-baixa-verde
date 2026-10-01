@@ -1,3 +1,10 @@
 if ('serviceWorker' in navigator && (location.protocol==='http:' || location.protocol==='https:')) {
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  window.addEventListener('load', async ()=>{
+    try{
+      const reg=await navigator.serviceWorker.register('./sw.js?v=1.3');
+      await reg.update();
+    }catch(e){
+      console.error('Service Worker',e);
+    }
+  });
 }
