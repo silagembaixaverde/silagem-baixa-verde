@@ -80,3 +80,9 @@ hr{border:0;border-top:1px solid var(--line)}
   .mobile-more-grid button{border:1px solid var(--line);background:#f8faf8;color:var(--text);padding:14px 12px;border-radius:12px;text-align:left;font-weight:700}
 }
 @media(max-width:390px){.grid{grid-template-columns:1fr}}
+
+
+.top-logo{width:42px;height:42px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid var(--line);flex:0 0 auto}
+@media(max-width:640px){
+  .top-logo{width:36px;height:36px;border-radius:9px}
+}
