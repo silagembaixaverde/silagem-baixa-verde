@@ -498,11 +498,39 @@ function dashboard(){
  content.innerHTML=`<div class="grid">${metric('Faturamento no mês',money(fat))}${metric('Recebido no mês',money(rec))}${metric('Total a receber',money(ar))}${metric('Gastos no mês',money(gm))}</div><div class="section"><div class="toolbar"><button class="primary" onclick="go('reports')">Ver relatório mensal completo</button><button class="secondary" onclick="go('settings')">Abrir configurações</button></div></div><div class="section"><h2>Pendências de recebimento</h2>${table(open,['Cliente','Data','Produto','Saldo'],s=>[s.customer,s.date,s.product,`<b>${money(s.receivable)}</b>`])}</div><div class="section"><h2>Estoque</h2>${table(db.inventory,['Produto','Atual','Mínimo','Situação'],i=>[i.product,i.current,i.minimum||0,badge(Number(i.current)<=Number(i.minimum||0)?'REPOR':'OK',Number(i.current)<=Number(i.minimum||0)?'danger':'')])}</div>`;
 }
 
+
+function setupAutocomplete(inputId,boxId,values,maxItems=12){
+ const input=document.getElementById(inputId),box=document.getElementById(boxId);
+ if(!input||!box)return;
+ const names=[...new Set((values||[]).map(v=>String(v||'').trim()).filter(Boolean))]
+   .sort((a,b)=>a.localeCompare(b,'pt-BR'));
+ function draw(){
+   const q=String(input.value||'').trim().toLocaleLowerCase('pt-BR');
+   const matches=names.filter(n=>!q||n.toLocaleLowerCase('pt-BR').includes(q)).slice(0,maxItems);
+   box.innerHTML=matches.length
+     ? matches.map(n=>'<button type="button" data-value="'+esc(n)+'">'+esc(n)+'</button>').join('')
+     : '<div class="autocomplete-empty">Nenhuma opção encontrada</div>';
+   box.classList.add('open');
+   box.querySelectorAll('button').forEach(btn=>{
+     btn.onclick=()=>{
+       input.value=btn.dataset.value||'';
+       box.classList.remove('open');
+       input.dispatchEvent(new Event('input',{bubbles:true}));
+       input.focus();
+     };
+   });
+ }
+ input.addEventListener('focus',draw);
+ input.addEventListener('click',draw);
+ input.addEventListener('input',draw);
+ input.addEventListener('blur',()=>setTimeout(()=>box.classList.remove('open'),140));
+}
+
 function saleNew(){
  title('Nova venda','Cliente, estoque e recebimento atualizam automaticamente.');
  content.innerHTML=`<div class="card"><form id="f">
  <div class="field"><label>Data</label><input name="date" type="date" value="${today()}" required></div>
- <div class="field span2"><label>Cliente</label><input name="customer" list="cl" required><datalist id="cl">${db.customers.map(c=>`<option value="${esc(c.name)}">`).join('')}</datalist></div>
+ <div class="field span2 autocomplete-field"><label>Cliente</label><input name="customer" id="saleCustomer" autocomplete="off" placeholder="Toque ou digite para buscar" required><div id="saleCustomerSuggestions" class="autocomplete-list"></div></div>
  <div class="field"><label>Produto</label><select name="product" required><option value="">Selecione</option>${db.products.map(p=>`<option>${esc(p.name)}</option>`).join('')}</select></div>
  <div class="field"><label>Quantidade</label><input name="quantity" type="number" min="1" required></div>
  <div class="field"><label>Preço unitário</label><input name="unit_price" type="number" step=".01" required></div>
@@ -516,6 +544,7 @@ function saleNew(){
  <div class="field"><label>NF / Nota fiscal</label><input name="invoice_number"></div>
  <div class="field span2"><label>Observações</label><input name="sale_notes"></div>
  <div class="full card" id="calc"></div></form><div class="actions"><button class="primary" id="saveSale">Salvar venda</button></div></div>`;
+ setupAutocomplete('saleCustomer','saleCustomerSuggestions',db.customers.map(c=>c.name));
  const form=f; function calcIt(){const o=Object.fromEntries(new FormData(form));const tot=Number(o.quantity||0)*Number(o.unit_price||0)-Number(o.discount||0)+Number(o.freight_charged||0);calc.innerHTML=`Total: <b>${money(tot)}</b> &nbsp; | &nbsp; A receber: <b>${money(Math.max(tot-Number(o.received||0),0))}</b>`}
  form.oninput=calcIt;calcIt(); form.product.onchange=()=>{const p=findProduct(form.product.value);if(p)form.unit_price.value=p.sale_price;calcIt()}
  saveSale.onclick=()=>{if(!form.reportValidity())return;const o=Object.fromEntries(new FormData(form));let c=findCustomer(o.customer.trim());if(!c){c={id:uid(),name:o.customer.trim(),cpf_cnpj:'',phone:'',email:'',address:'',number:'',complement:'',neighborhood:'',city:'',state:'',zip:'',type:'',notes:''};db.customers.push(c)}
