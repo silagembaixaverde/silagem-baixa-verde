@@ -1,6 +1,6 @@
 const fs=require('fs');
 fs.mkdirSync('public',{recursive:true});
-for(const f of ['style.css','data.js','register-sw.js','sw.js','manifest.webmanifest','logo.svg']) fs.copyFileSync(f,'public/'+f);
+for(const f of ['style.css','data.js','receipt-share.js','register-sw.js','sw.js','manifest.webmanifest','logo.svg']) fs.copyFileSync(f,'public/'+f);
 
 if(!process.env.SUPABASE_URL||!process.env.SUPABASE_KEY) throw new Error('Variaveis Supabase ausentes');
 
