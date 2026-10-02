@@ -1,7 +1,7 @@
 {
   "name": "silagem-baixa-verde-web",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "scripts": {
     "build": "node build.cjs",
     "android:sync": "npx cap sync android",
