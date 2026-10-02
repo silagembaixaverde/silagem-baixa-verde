@@ -1,0 +1,98 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "capacitor.config.json"
+      - "receipt-share.js"
+      - ".github/workflows/build-android.yml"
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Prepare fallback web directory
+        run: |
+          mkdir -p public
+          cat > public/index.html <<'EOF'
+          <!doctype html>
+          <html lang="pt-BR">
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Silagem Baixa Verde</title></head>
+          <body><p>Conectando ao Silagem Baixa Verde...</p></body>
+          </html>
+          EOF
+
+      - name: Create Android project
+        run: npx cap add android
+
+      - name: Sync native plugins
+        run: npx cap sync android
+
+      - name: Apply Silagem Baixa Verde icon
+        run: |
+          python -m pip install --quiet pillow
+          python <<'PY'
+          import base64, re
+          from io import BytesIO
+          from pathlib import Path
+          from PIL import Image
+
+          svg = Path("logo.svg").read_text(encoding="utf-8")
+          match = re.search(r'data:image/webp;base64,([^"]+)', svg)
+          if not match:
+              raise SystemExit("Logo base64 não encontrada em logo.svg")
+
+          image = Image.open(BytesIO(base64.b64decode(match.group(1)))).convert("RGBA")
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+
+          for folder, size in sizes.items():
+              target = Path("android/app/src/main/res") / folder
+              target.mkdir(parents=True, exist_ok=True)
+              resized = image.resize((size, size), Image.Resampling.LANCZOS)
+              resized.save(target / "ic_launcher.png")
+              resized.save(target / "ic_launcher_round.png")
+              resized.save(target / "ic_launcher_foreground.png")
+          PY
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "Silagem-Baixa-Verde.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Silagem-Baixa-Verde-APK
+          path: Silagem-Baixa-Verde.apk
+          if-no-files-found: error
