@@ -1138,7 +1138,7 @@ ${db.settings.email?`<p><b>E-mail:</b> ${esc(db.settings.email)}</p>`:''}
 ${db.settings.address?`<p><b>Endereço:</b> ${esc([db.settings.address,db.settings.city,db.settings.state].filter(Boolean).join(', '))}</p>`:''}
 <h3>Dados do cliente</h3><p><b>Nome / Razão social:</b> ${esc(c.name)}</p>${c.cpf_cnpj?`<p><b>CPF/CNPJ:</b> ${esc(c.cpf_cnpj)}</p>`:''}${c.phone?`<p><b>Telefone:</b> ${esc(c.phone)}</p>`:''}${customerAddress(c)?`<p><b>Endereço:</b> ${esc(customerAddress(c))}</p>`:''}<h3>Produtos</h3><div class="table-wrap"><table><thead><tr><th>Produto / descrição</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div><p><b>Frete:</b> ${money(q.freight)}</p><p><b>Pagamento:</b> ${esc(q.payment_method)}</p><p><b>Validade:</b> ${q.valid_days} dias</p>${q.notes?`<p><b>Observações:</b> ${esc(q.notes)}</p>`:''}<div class="quote-total">TOTAL: ${money(q.total)}</div>
 ${db.settings.document_footer?`<p style="margin-top:24px;color:#6d776e"><small>${esc(db.settings.document_footer)}</small></p>`:''}
-<div class="actions"><button class="secondary" onclick="window.print()">Imprimir / PDF</button><a href="https://wa.me/?text=${msg}" target="_blank"><button class="primary">Enviar pelo WhatsApp</button></a></div></div>`}
+<div class="actions"><button class="secondary" onclick="window.print()">Imprimir / PDF</button><button class="primary" onclick="shareReceiptPdf('${s.id}','${num}')">Enviar PDF pelo WhatsApp</button></div></div>`}
 
 function receipts(){
  title('Recibos','Recibo completo com os dados da compra e do cliente.');
