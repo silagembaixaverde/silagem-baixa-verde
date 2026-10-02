@@ -790,7 +790,8 @@ window.editSale=function(id){
 
    <div class="field"><label>Produto</label><select name="product">${db.products.map(p=>`<option ${p.name===s.product?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
    <div class="field"><label>Quantidade</label><input name="quantity" type="number" min="0" step="1" value="${Number(s.quantity||0)}"></div>
-   <div class="field"><label>Preço unitário</label><input name="unit_price" type="number" min="0" step="0.01" value="${Number(s.unit_price||0)}"></div>
+   <div class="field"><label>Preço unitário</label><input name="unit_price" type="number" min="0" step="0.01" value="${Number(s.unit_price||((Number(s.total||0)+Number(s.discount||0)-Number(s.freight_charged||0))/Math.max(Number(s.quantity||0),1))||0)}"></div>
+   <div class="field"><label>Valor total</label><input id="saleEditTotal" type="text" value="${money(Number(s.total||0))}" readonly></div>
 
    <div class="field"><label>Desconto</label><input name="discount" type="number" min="0" step="0.01" value="${Number(s.discount||0)}"></div>
    <div class="field"><label>Carga / Lote</label><input name="lot" list="editLotList" value="${esc(s.lot||'')}"><datalist id="editLotList">${db.lots.map(l=>`<option value="${esc(l.lot)}">`).join('')}</datalist></div>
@@ -817,11 +818,13 @@ window.editSale=function(id){
 
  const form=document.getElementById('saleEditForm');
  const summary=document.getElementById('saleEditSummary');
+ const totalField=document.getElementById('saleEditTotal');
 
  function redrawSummary(){
    const o=Object.fromEntries(new FormData(form));
    const q=Number(o.quantity||0),up=Number(o.unit_price||0),d=Number(o.discount||0),fc=Number(o.freight_charged||0),fr=Number(o.freight_real||0),rv=Number(o.received||0);
    const total=q*up-d+fc;
+   if(totalField) totalField.value=money(total);
    summary.innerHTML=
      metric('Total da venda',money(total))+
      metric('Recebido',money(rv))+
