@@ -47,7 +47,7 @@ hr{border:0;border-top:1px solid var(--line)}
   .span2,.full{grid-column:auto}
   .toolbar{gap:8px}
   .toolbar button{flex:1 1 140px}
-  .actions{position:sticky;bottom:76px;background:linear-gradient(180deg,transparent,var(--bg) 22%);padding-top:14px;z-index:6}
+  .actions{position:static;bottom:auto;background:transparent;padding-top:8px;z-index:auto}
   .actions button{min-height:44px}
   .table-wrap{max-height:none;overflow-x:auto}
   table{min-width:620px}
@@ -122,4 +122,22 @@ hr{border:0;border-top:1px solid var(--line)}
   .quote .table-wrap{overflow-x:auto}
   .quote table{min-width:0;width:100%;table-layout:fixed;font-size:11px}
   .quote th,.quote td{padding:6px 4px;overflow-wrap:anywhere;word-break:break-word}
+}
+
+
+@media(max-width:640px){
+  body{background:#f2f2f7}
+  header{background:rgba(255,255,255,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid #e5e5ea}
+  #content{padding:12px 12px 22px}
+  .card{border:1px solid #e5e5ea;border-radius:18px;box-shadow:0 1px 3px #0000000d;background:#fff}
+  input,select,textarea{min-height:44px;border-radius:12px;border-color:#d1d1d6;background:#fff}
+  .primary,.secondary,.danger{min-height:44px;border-radius:12px}
+  .section h2{font-size:18px}
+  .quote-item-grid{gap:10px!important}
+  .quote-item-grid .field{width:100%}
+  #ai{width:100%;margin-top:8px}
+  .actions{margin-top:12px;display:flex;flex-wrap:wrap}
+  .actions>*{min-width:0}
+  .actions button{flex:1 1 140px}
+  .mobile-nav{background:rgba(255,255,255,.97);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top-color:#d1d1d6}
 }
