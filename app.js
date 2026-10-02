@@ -1138,7 +1138,75 @@ ${db.settings.email?`<p><b>E-mail:</b> ${esc(db.settings.email)}</p>`:''}
 ${db.settings.address?`<p><b>Endereço:</b> ${esc([db.settings.address,db.settings.city,db.settings.state].filter(Boolean).join(', '))}</p>`:''}
 <h3>Dados do cliente</h3><p><b>Nome / Razão social:</b> ${esc(c.name)}</p>${c.cpf_cnpj?`<p><b>CPF/CNPJ:</b> ${esc(c.cpf_cnpj)}</p>`:''}${c.phone?`<p><b>Telefone:</b> ${esc(c.phone)}</p>`:''}${customerAddress(c)?`<p><b>Endereço:</b> ${esc(customerAddress(c))}</p>`:''}<h3>Produtos</h3><div class="table-wrap"><table><thead><tr><th>Produto / descrição</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div><p><b>Frete:</b> ${money(q.freight)}</p><p><b>Pagamento:</b> ${esc(q.payment_method)}</p><p><b>Validade:</b> ${q.valid_days} dias</p>${q.notes?`<p><b>Observações:</b> ${esc(q.notes)}</p>`:''}<div class="quote-total">TOTAL: ${money(q.total)}</div>
 ${db.settings.document_footer?`<p style="margin-top:24px;color:#6d776e"><small>${esc(db.settings.document_footer)}</small></p>`:''}
-<div class="actions"><button class="secondary" onclick="window.print()">Imprimir / PDF</button><a href="https://wa.me/?text=${msg}" target="_blank"><button class="primary">Enviar pelo WhatsApp</button></a></div></div>`}
+<div class="actions"><button class="secondary" onclick="window.print()">Imprimir / PDF</button><button class="primary" onclick="shareReceiptPdf(db.sales.find(x=>x.id==='${s.id}'),'${num}',findCustomer('${esc(s.customer)}')||{name:'${esc(s.customer)}'},findProduct('${esc(s.product)}')||{},'${status}')">Enviar PDF pelo WhatsApp</button></div></div>`
+
+async function shareReceiptPdf(s,num,c,p,status){
+ try{
+   const jsPDF=window.jspdf?.jsPDF;
+   if(!jsPDF){alert('Não foi possível carregar o gerador de PDF. Verifique sua internet e tente novamente.');return}
+   const doc=new jsPDF({unit:'mm',format:'a4'});
+   const left=18,right=192,maxWidth=right-left;
+   let y=20;
+   const line=(label,value)=>{
+     doc.setFont('helvetica','bold');doc.text(label,left,y);
+     doc.setFont('helvetica','normal');
+     const txt=doc.splitTextToSize(String(value??''),maxWidth-48);
+     doc.text(txt,left+48,y);
+     y+=Math.max(7,txt.length*5.2);
+   };
+   doc.setTextColor(31,107,42);
+   doc.setFont('helvetica','bold');doc.setFontSize(18);
+   doc.text(companyName(),left,y);y+=8;
+   doc.setFontSize(14);doc.text('RECIBO Nº '+num,left,y);y+=8;
+   doc.setDrawColor(31,107,42);doc.line(left,y,right,y);y+=9;
+   doc.setTextColor(24,32,24);doc.setFontSize(10);
+
+   line('Data:',s.date);
+   line('Cliente:',c.name||s.customer);
+   if(c.cpf_cnpj)line('CPF/CNPJ:',c.cpf_cnpj);
+   if(c.phone)line('Telefone:',c.phone);
+   if(customerAddress(c))line('Endereço:',customerAddress(c));
+   y+=3;
+   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Dados da compra',left,y);y+=8;
+   doc.setFontSize(10);
+   line('Produto:',s.product);
+   line('Descrição:',p.details||s.product);
+   line('Quantidade:',s.quantity);
+   line('Preço unitário:',money(s.unit_price||0));
+   line('Frete cobrado:',money(s.freight_charged||0));
+   line('Total da venda:',money(s.total||0));
+   if(s.invoice_number)line('NF:',s.invoice_number);
+   y+=3;
+   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('Confirmação de pagamento',left,y);y+=8;
+   doc.setFontSize(10);
+   line('Valor recebido:',money(s.received||0));
+   line('Saldo:',money(s.receivable||0));
+   line('Situação:',status);
+   if(db.settings.receipt_text){
+     y+=2;doc.setFont('helvetica','normal');
+     const txt=doc.splitTextToSize(db.settings.receipt_text,maxWidth);
+     doc.text(txt,left,y);y+=txt.length*5.2+4;
+   }
+   if(db.settings.document_footer){
+     doc.setFontSize(8);doc.setTextColor(90,100,90);
+     const txt=doc.splitTextToSize(db.settings.document_footer,maxWidth);
+     doc.text(txt,left,Math.min(y+6,278));
+   }
+
+   const blob=doc.output('blob');
+   const file=new File([blob],`Recibo-${num}-Silagem-Baixa-Verde.pdf`,{type:'application/pdf'});
+   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+     await navigator.share({files:[file],title:`Recibo nº ${num} - ${companyName()}`,text:`Recibo nº ${num}`});
+   }else{
+     doc.save(file.name);
+     alert('O PDF foi baixado. Neste aparelho, selecione o arquivo no WhatsApp para enviar.');
+   }
+ }catch(err){
+   if(err?.name==='AbortError')return;
+   console.error('Erro ao compartilhar recibo em PDF',err);
+   alert('Não foi possível compartilhar o PDF neste aparelho.');
+ }
+}
 
 function receipts(){
  title('Recibos','Recibo completo com os dados da compra e do cliente.');
