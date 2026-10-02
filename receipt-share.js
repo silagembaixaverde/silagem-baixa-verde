@@ -147,7 +147,6 @@ window.shareReceiptPdf = async function(saleId, receiptNumber){
       doc.text(footer, left, Math.min(y + 6, 278));
     }
 
-    const blob = doc.output('blob');
     const safeCustomer = String(customer.name || sale.customer || 'Cliente')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -156,12 +155,33 @@ window.shareReceiptPdf = async function(saleId, receiptNumber){
       .trim();
     const safeDate = String(sale.date || '').trim() || new Date().toISOString().slice(0,10);
     const fileName = safeDate + ' - ' + safeCustomer + '.pdf';
+
+    const capPlugins = window.Capacitor && window.Capacitor.Plugins;
+    const nativeFs = capPlugins && capPlugins.Filesystem;
+    const nativeShare = capPlugins && capPlugins.Share;
+    if (nativeFs && nativeShare) {
+      const dataUri = doc.output('datauristring');
+      const base64 = dataUri.split(',')[1];
+      const saved = await nativeFs.writeFile({
+        path: fileName,
+        data: base64,
+        directory: 'CACHE'
+      });
+      await nativeShare.share({
+        title: fileName,
+        url: saved.uri,
+        dialogTitle: 'Enviar recibo'
+      });
+      return;
+    }
+
+    const blob = doc.output('blob');
     const file = new File([blob], fileName, { type: 'application/pdf' });
 
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         files: [file],
-        title: 'Recibo nº ' + receiptNumber + ' - ' + companyName()
+        title: fileName
       });
       return;
     }
