@@ -141,3 +141,120 @@ hr{border:0;border-top:1px solid var(--line)}
   .actions button{flex:1 1 140px}
   .mobile-nav{background:rgba(255,255,255,.97);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top-color:#d1d1d6}
 }
+
+
+/* Silagem Baixa Verde — identidade visual mobile */
+@media(max-width:640px){
+  :root{
+    --g:#1f6b2a;
+    --g2:#2f8c39;
+    --brand-dark:#153f1d;
+    --brand-soft:#eaf5ec;
+    --brand-softer:#f5faf6;
+  }
+
+  body{background:linear-gradient(180deg,#eef6ef 0,#f6f8f6 180px,#f2f2f7 100%)}
+
+  header{
+    background:linear-gradient(135deg,var(--brand-dark),var(--g));
+    border-bottom:0;
+    box-shadow:0 6px 18px #153f1d24;
+  }
+  header h1{color:#fff;font-weight:800;letter-spacing:-.2px}
+  header p,#cloudStatus{color:#d9efdd!important}
+  .top-logo{
+    background:#fff;
+    border:1px solid #ffffff66;
+    box-shadow:0 2px 8px #0002;
+  }
+  #operatorBox .secondary{
+    background:#ffffff1f!important;
+    color:#fff!important;
+    border:1px solid #ffffff3d!important;
+  }
+
+  #content{padding-top:14px}
+
+  .card{
+    border-color:#dfe9e0;
+    box-shadow:0 4px 14px #1f6b2a0d;
+  }
+  .metric{
+    position:relative;
+    overflow:hidden;
+    background:linear-gradient(180deg,#fff 0,var(--brand-softer) 100%);
+  }
+  .metric::before{
+    content:"";
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:4px;
+    background:linear-gradient(180deg,var(--g2),var(--g));
+  }
+  .metric .label{color:#5d6b5f;font-weight:700}
+  .metric .value{color:var(--g);letter-spacing:-.4px}
+
+  .section h2{color:var(--brand-dark)}
+  .field label{color:#465a49}
+
+  input:focus,select:focus,textarea:focus{
+    outline:none;
+    border-color:var(--g2);
+    box-shadow:0 0 0 3px #2f8c3924;
+  }
+
+  .primary{
+    background:linear-gradient(180deg,var(--g2),var(--g));
+    box-shadow:0 3px 8px #1f6b2a26;
+  }
+  .secondary{
+    background:var(--brand-soft);
+    color:var(--brand-dark);
+  }
+
+  .mobile-nav{
+    background:linear-gradient(180deg,#194e23,#133d1b);
+    border-top:0;
+    box-shadow:0 -6px 20px #0d2b1440;
+  }
+  .mobile-nav button{color:#c9dfcd}
+  .mobile-nav button.active{
+    color:#fff;
+    background:#ffffff18;
+    box-shadow:inset 0 0 0 1px #ffffff1f;
+  }
+  .mobile-nav button span{font-weight:800}
+
+  .mobile-more{
+    background:linear-gradient(180deg,#fff,#f4faf5);
+  }
+  .mobile-more-grid button{
+    background:#fff;
+    border-color:#dbe8dd;
+    color:var(--brand-dark);
+  }
+
+  .autocomplete-list{
+    border-color:#cfe0d2;
+    box-shadow:0 12px 30px #153f1d24;
+  }
+  .autocomplete-list button:active{background:var(--brand-soft)}
+
+  .data-table tr{
+    border-color:#dfe9e0;
+    box-shadow:0 2px 8px #1f6b2a0a;
+  }
+  .data-table td::before{color:#55705a}
+
+  .quote{
+    border-color:#d9e7db;
+    box-shadow:0 6px 18px #1f6b2a12;
+  }
+  .quote-head{
+    background:linear-gradient(180deg,#f7fbf8,#eef7ef);
+    margin:-14px -14px 14px;
+    padding:14px;
+    border-radius:18px 18px 0 0;
+  }
+  .quote-total{color:var(--g)}
+}
