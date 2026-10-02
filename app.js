@@ -128,7 +128,7 @@ function setupRealtime(){
      applySettings();
      setCloudStatus('Atualizado agora',true);
      const page=document.querySelector('nav button.active')?.dataset.page;
-     if(page&&!document.getElementById('loginOverlay')&&!document.getElementById('cloudLoginOverlay'))go(page);
+     if(page&&!preserveDetailView&&!document.getElementById('loginOverlay')&&!document.getElementById('cloudLoginOverlay'))go(page);
    })
    .subscribe();
 }
@@ -250,7 +250,8 @@ function applySettings(){
 function renderNav(){nav.innerHTML=navItems.map(([id,t])=>`<button data-page="${id}" onclick="go('${id}')">${t}</button>`).join('')}
 window.openMobileMore=function(){document.getElementById('mobileMore')?.classList.add('open');document.getElementById('mobileMoreBackdrop')?.classList.add('open');document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage==='more'))}
 window.closeMobileMore=function(){document.getElementById('mobileMore')?.classList.remove('open');document.getElementById('mobileMoreBackdrop')?.classList.remove('open')}
-function go(page){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage===page));closeMobileMore();document.querySelector('.sidebar')?.classList.remove('open');const map={dashboard,reports,activity,saleNew,receivables,sales,products,expenses,customers,inventory,lots,quotes,receipts,settings};(map[page.replace('-new','New')]||dashboard)()}
+let preserveDetailView=false;
+function go(page){preserveDetailView=false;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));document.querySelectorAll('[data-mobile-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobilePage===page));closeMobileMore();document.querySelector('.sidebar')?.classList.remove('open');const map={dashboard,reports,activity,saleNew,receivables,sales,products,expenses,customers,inventory,lots,quotes,receipts,settings};(map[page.replace('-new','New')]||dashboard)()}
 menuBtn.onclick=()=>document.querySelector('.sidebar').classList.toggle('open');
 function title(t,s=''){pageTitle.textContent=t;pageSub.textContent=s}
 function metric(l,v,n=''){return `<div class="card metric"><div class="label">${l}</div><div class="value">${v}</div><div class="note">${n}</div></div>`}
@@ -1143,7 +1144,7 @@ function receipts(){
  title('Recibos','Recibo completo com os dados da compra e do cliente.');
  const r=db.sales.filter(s=>s.received>0).sort((a,b)=>String(b.date).localeCompare(String(a.date)));content.innerHTML=table(r,['Data','Cliente','Produto','Qtd.','Recebido','Saldo','Ação'],s=>[s.date,s.customer,s.product,s.quantity,money(s.received),money(s.receivable),`<button class="secondary" onclick="receipt('${s.id}')">Gerar recibo</button>`])
 }
-window.receipt=id=>{const s=db.sales.find(x=>x.id===id),c=findCustomer(s.customer)||{name:s.customer},p=findProduct(s.product)||{},num=String(db.receipts.length+1).padStart(5,'0'),status=s.receivable<=0?'PAGAMENTO QUITADO':'PAGAMENTO PARCIAL',msg=encodeURIComponent(`Recibo nº ${num} - Silagem Baixa Verde\nCliente: ${s.customer}\nRecebido: ${money(s.received)}\nSaldo: ${money(s.receivable)}`);db.receipts.push({id:uid(),number:num,sale_id:id,date:today()});save();content.innerHTML=`<div class="quote"><div class="quote-head"><img src="${appLogo()}"><div><h2>RECIBO Nº ${num}</h2><b>${esc(companyName())}</b><br><small>${esc(companySlogan())}</small></div></div>${db.settings.cpf_cnpj?`<p><b>CPF/CNPJ da empresa:</b> ${esc(db.settings.cpf_cnpj)}</p>`:''}
+window.receipt=id=>{preserveDetailView=true;const s=db.sales.find(x=>x.id===id),c=findCustomer(s.customer)||{name:s.customer},p=findProduct(s.product)||{},num=String(db.receipts.length+1).padStart(5,'0'),status=s.receivable<=0?'PAGAMENTO QUITADO':'PAGAMENTO PARCIAL',msg=encodeURIComponent(`Recibo nº ${num} - Silagem Baixa Verde\nCliente: ${s.customer}\nRecebido: ${money(s.received)}\nSaldo: ${money(s.receivable)}`);db.receipts.push({id:uid(),number:num,sale_id:id,date:today()});save();content.innerHTML=`<div class="quote"><div class="quote-head"><img src="${appLogo()}"><div><h2>RECIBO Nº ${num}</h2><b>${esc(companyName())}</b><br><small>${esc(companySlogan())}</small></div></div>${db.settings.cpf_cnpj?`<p><b>CPF/CNPJ da empresa:</b> ${esc(db.settings.cpf_cnpj)}</p>`:''}
 ${db.settings.phone?`<p><b>Telefone:</b> ${esc(db.settings.phone)}</p>`:''}
 ${db.settings.address?`<p><b>Endereço:</b> ${esc([db.settings.address,db.settings.city,db.settings.state].filter(Boolean).join(', '))}</p>`:''}
 <h3>Dados do cliente</h3><p><b>Nome / Razão social:</b> ${esc(c.name)}</p>${c.cpf_cnpj?`<p><b>CPF/CNPJ:</b> ${esc(c.cpf_cnpj)}</p>`:''}${c.phone?`<p><b>Telefone:</b> ${esc(c.phone)}</p>`:''}${customerAddress(c)?`<p><b>Endereço:</b> ${esc(customerAddress(c))}</p>`:''}<h3>Dados da compra</h3><p><b>Data:</b> ${s.date}</p><p><b>Produto:</b> ${esc(s.product)}</p><p><b>Descrição:</b> ${esc(p.details||s.product)}</p><p><b>Quantidade:</b> ${s.quantity}</p><p><b>Preço unitário:</b> ${money(s.unit_price||0)}</p><p><b>Frete cobrado:</b> ${money(s.freight_charged)}</p><p><b>Total da venda:</b> ${money(s.total)}</p>${s.invoice_number?`<p><b>NF:</b> ${esc(s.invoice_number)}</p>`:''}<h3>Confirmação de pagamento</h3><p><b>Valor recebido:</b> ${money(s.received)}</p><p><b>Saldo:</b> ${money(s.receivable)}</p><p><b>Situação:</b> ${status}</p><p>${esc(db.settings.receipt_text||'')}</p>
