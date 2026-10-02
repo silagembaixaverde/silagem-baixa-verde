@@ -1140,8 +1140,13 @@ ${db.settings.address?`<p><b>Endereço:</b> ${esc([db.settings.address,db.settin
 ${db.settings.document_footer?`<p style="margin-top:24px;color:#6d776e"><small>${esc(db.settings.document_footer)}</small></p>`:''}
 <div class="actions"><button class="secondary" onclick="window.print()">Imprimir / PDF</button><button class="primary" onclick="shareReceiptPdf(db.sales.find(x=>x.id==='${s.id}'),'${num}',findCustomer('${esc(s.customer)}')||{name:'${esc(s.customer)}'},findProduct('${esc(s.product)}')||{},'${status}')">Enviar PDF pelo WhatsApp</button></div></div>`
 
-async function shareReceiptPdf(s,num,c,p,status){
+async function shareReceiptPdf(saleId,num){
  try{
+   const s=db.sales.find(x=>x.id===saleId);
+   if(!s){alert('Venda não encontrada.');return}
+   const c=findCustomer(s.customer)||{name:s.customer};
+   const p=findProduct(s.product)||{};
+   const status=s.receivable<=0?'PAGAMENTO QUITADO':'PAGAMENTO PARCIAL';
    const jsPDF=window.jspdf?.jsPDF;
    if(!jsPDF){alert('Não foi possível carregar o gerador de PDF. Verifique sua internet e tente novamente.');return}
    const doc=new jsPDF({unit:'mm',format:'a4'});
@@ -1217,7 +1222,7 @@ ${db.settings.phone?`<p><b>Telefone:</b> ${esc(db.settings.phone)}</p>`:''}
 ${db.settings.address?`<p><b>Endereço:</b> ${esc([db.settings.address,db.settings.city,db.settings.state].filter(Boolean).join(', '))}</p>`:''}
 <h3>Dados do cliente</h3><p><b>Nome / Razão social:</b> ${esc(c.name)}</p>${c.cpf_cnpj?`<p><b>CPF/CNPJ:</b> ${esc(c.cpf_cnpj)}</p>`:''}${c.phone?`<p><b>Telefone:</b> ${esc(c.phone)}</p>`:''}${customerAddress(c)?`<p><b>Endereço:</b> ${esc(customerAddress(c))}</p>`:''}<h3>Dados da compra</h3><p><b>Data:</b> ${s.date}</p><p><b>Produto:</b> ${esc(s.product)}</p><p><b>Descrição:</b> ${esc(p.details||s.product)}</p><p><b>Quantidade:</b> ${s.quantity}</p><p><b>Preço unitário:</b> ${money(s.unit_price||0)}</p><p><b>Frete cobrado:</b> ${money(s.freight_charged)}</p><p><b>Total da venda:</b> ${money(s.total)}</p>${s.invoice_number?`<p><b>NF:</b> ${esc(s.invoice_number)}</p>`:''}<h3>Confirmação de pagamento</h3><p><b>Valor recebido:</b> ${money(s.received)}</p><p><b>Saldo:</b> ${money(s.receivable)}</p><p><b>Situação:</b> ${status}</p><p>${esc(db.settings.receipt_text||'')}</p>
 ${db.settings.document_footer?`<p style="margin-top:20px;color:#6d776e"><small>${esc(db.settings.document_footer)}</small></p>`:''}
-<div class="actions"><button class="secondary" onclick="window.print()">Imprimir / PDF</button><a href="https://wa.me/?text=${msg}" target="_blank"><button class="primary">Enviar pelo WhatsApp</button></a></div></div>`}
+<div class="actions"><button class="secondary" onclick="window.print()">Imprimir / PDF</button><button class="primary" onclick="shareReceiptPdf('${s.id}','${num}')">Enviar PDF pelo WhatsApp</button></div></div>`}
 
 async function start(){
  db=migrate(INITIAL);
