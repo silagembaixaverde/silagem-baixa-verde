@@ -35,8 +35,30 @@ window.shareReceiptPdf = async function(saleId, receiptNumber){
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
     doc.text(companyName(), left, y);
-    y += 9;
+    y += 8;
 
+    doc.setTextColor(70, 82, 72);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+
+    const companyLines = [];
+    if (db.settings.cpf_cnpj) companyLines.push('CPF/CNPJ: ' + db.settings.cpf_cnpj);
+    if (db.settings.phone) companyLines.push('Telefone: ' + db.settings.phone);
+    if (db.settings.email) companyLines.push('E-mail: ' + db.settings.email);
+    const companyAddress = [db.settings.address, db.settings.city, db.settings.state]
+      .filter(Boolean)
+      .join(', ');
+    if (companyAddress) companyLines.push('Endereço: ' + companyAddress);
+
+    companyLines.forEach(function(lineText) {
+      const lines = doc.splitTextToSize(String(lineText), maxWidth);
+      doc.text(lines, left, y);
+      y += Math.max(5, lines.length * 4.5);
+    });
+
+    y += 2;
+    doc.setTextColor(31, 107, 42);
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.text('RECIBO Nº ' + receiptNumber, left, y);
     y += 8;
