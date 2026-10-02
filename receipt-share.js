@@ -1,3 +1,23 @@
+async function receiptLogoPng(){
+  return new Promise(function(resolve,reject){
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=function(){
+      try{
+        const canvas=document.createElement('canvas');
+        canvas.width=512;
+        canvas.height=512;
+        const ctx=canvas.getContext('2d');
+        ctx.clearRect(0,0,512,512);
+        ctx.drawImage(img,0,0,512,512);
+        resolve(canvas.toDataURL('image/png'));
+      }catch(err){reject(err)}
+    };
+    img.onerror=reject;
+    img.src=appLogo();
+  });
+}
+
 window.shareReceiptPdf = async function(saleId, receiptNumber){
   try {
     const sale = db.sales.find(x => x.id === saleId);
@@ -31,10 +51,20 @@ window.shareReceiptPdf = async function(saleId, receiptNumber){
       y += Math.max(7, lines.length * 5.2);
     }
 
+    let headerLeft = left;
+    try {
+      const logoPng = await receiptLogoPng();
+      doc.addImage(logoPng, 'PNG', left, 14, 28, 28);
+      headerLeft = left + 34;
+      y = 20;
+    } catch (logoErr) {
+      console.warn('Logo não pôde ser adicionada ao PDF', logoErr);
+    }
+
     doc.setTextColor(31, 107, 42);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
-    doc.text(companyName(), left, y);
+    doc.text(companyName(), headerLeft, y);
     y += 8;
 
     doc.setTextColor(70, 82, 72);
@@ -52,7 +82,7 @@ window.shareReceiptPdf = async function(saleId, receiptNumber){
 
     companyLines.forEach(function(lineText) {
       const lines = doc.splitTextToSize(String(lineText), maxWidth);
-      doc.text(lines, left, y);
+      doc.text(lines, headerLeft, y);
       y += Math.max(5, lines.length * 4.5);
     });
 
