@@ -87,7 +87,7 @@ hr{border:0;border-top:1px solid var(--line)}
   .top-logo{width:36px;height:36px;border-radius:9px}
 }
 
-.expense-supplier-field{position:relative}
+.autocomplete-field,.expense-supplier-field{position:relative}
 .autocomplete-list{display:none;position:absolute;left:0;right:0;top:100%;z-index:40;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 22px #0002;max-height:240px;overflow:auto;margin-top:4px}
 .autocomplete-list.open{display:block}
 .autocomplete-list button{display:block;width:100%;border:0;border-bottom:1px solid #edf1ed;background:#fff;color:var(--text);padding:11px 12px;text-align:left;font:inherit}
