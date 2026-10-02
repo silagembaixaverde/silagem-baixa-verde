@@ -4,8 +4,8 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f7f3",
-  "theme_color": "#1f6b2a",
+  "background_color": "#eef6ef",
+  "theme_color": "#153f1d",
   "description": "Gestão de vendas, gastos, estoque, cargas, clientes, orçamentos e recibos.",
   "icons": [
     {
