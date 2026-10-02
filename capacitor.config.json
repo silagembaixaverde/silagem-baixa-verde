@@ -1,0 +1,13 @@
+{
+  "appId": "br.com.silagembaixaverde.app",
+  "appName": "Silagem Baixa Verde",
+  "webDir": "public",
+  "server": {
+    "url": "https://silagem-baixa-verde.onrender.com",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
