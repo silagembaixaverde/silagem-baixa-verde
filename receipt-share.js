@@ -96,7 +96,14 @@ window.shareReceiptPdf = async function(saleId, receiptNumber){
     }
 
     const blob = doc.output('blob');
-    const fileName = 'Recibo-' + receiptNumber + '-Silagem-Baixa-Verde.pdf';
+    const safeCustomer = String(customer.name || sale.customer || 'Cliente')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\\/:*?"<>|]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const safeDate = String(sale.date || '').trim() || new Date().toISOString().slice(0,10);
+    const fileName = safeDate + ' - ' + safeCustomer + '.pdf';
     const file = new File([blob], fileName, { type: 'application/pdf' });
 
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
