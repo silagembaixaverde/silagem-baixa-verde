@@ -3,6 +3,17 @@
   "private": true,
   "version": "1.2.0",
   "scripts": {
-    "build": "node build.cjs"
+    "build": "node build.cjs",
+    "android:sync": "npx cap sync android",
+    "android:apk": "cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/core": "^7.4.0",
+    "@capacitor/filesystem": "^7.1.4",
+    "@capacitor/share": "^7.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.0"
   }
 }
