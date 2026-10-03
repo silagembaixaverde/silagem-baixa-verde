@@ -6,7 +6,8 @@
 <title>Silagem Baixa Verde</title>
 <meta name="theme-color" content="#153f1d">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="style.css?v=1.20">
+<link rel="stylesheet" href="style.css?v=1.21">
+<link rel="stylesheet" href="weather-widget.css?v=1.21">
 </head>
 <body>
 <div id="app">
@@ -22,6 +23,24 @@
       <button id="menuBtn">☰</button>
       <img class="top-logo" src="logo.svg" alt="Silagem Baixa Verde">
       <div class="page-head"><h1 id="pageTitle">Painel</h1><p id="pageSub"></p></div>
+
+      <div class="live-widget" id="liveWidget" aria-label="Data, hora, localização e clima">
+        <div class="live-widget-group">
+          <span class="main" id="liveClock">--:--</span>
+          <span class="sub" id="liveDate">--/--/----</span>
+        </div>
+        <span class="live-widget-divider"></span>
+        <div class="live-widget-group">
+          <span class="main" id="livePlace">Bebedouro - SP</span>
+          <span class="sub" id="liveCondition">Carregando clima...</span>
+        </div>
+        <span class="live-widget-divider"></span>
+        <div class="live-widget-group">
+          <span class="main" id="liveTemp">--°C</span>
+          <span class="sub">agora</span>
+        </div>
+      </div>
+
       <div class="header-meta" style="margin-left:auto;display:flex;align-items:center;gap:10px">
         <small id="cloudStatus" style="font-weight:700;color:#6d776e">Nuvem</small>
         <div id="operatorBox" style="display:flex;align-items:center;gap:8px"></div>
@@ -57,11 +76,12 @@
   </div>
 </section>
 
-<script src="data.js?v=1.20"></script>
+<script src="data.js?v=1.21"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="app.js?v=1.20"></script>
-<script src="receipt-share.js?v=1.20"></script>
-<script src="register-sw.js?v=1.20"></script>
+<script src="app.js?v=1.21"></script>
+<script src="receipt-share.js?v=1.21"></script>
+<script src="weather-widget.js?v=1.21"></script>
+<script src="register-sw.js?v=1.21"></script>
 </body>
 </html>
