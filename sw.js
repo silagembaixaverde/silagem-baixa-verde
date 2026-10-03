@@ -1,4 +1,4 @@
-const CACHE='sbv-v1-24';
+const CACHE='sbv-v1-25';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./logo.svg','./style.css','./weather-widget.css','./data.js','./app.js','./receipt-share.js','./weather-widget.js','./register-sw.js'];
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())
