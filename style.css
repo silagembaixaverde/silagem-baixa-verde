@@ -268,3 +268,13 @@ hr{border:0;border-top:1px solid var(--line)}
     min-height:calc(70px + env(safe-area-inset-top));
   }
 }
+
+
+/* Espaço seguro para barra de status/notificações do celular */
+@media(max-width:640px){
+  header{
+    padding-top:calc(14px + env(safe-area-inset-top));
+    padding-bottom:10px;
+    min-height:calc(70px + env(safe-area-inset-top));
+  }
+}
