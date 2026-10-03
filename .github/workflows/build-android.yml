@@ -66,7 +66,11 @@ jobs:
               raise SystemExit("Logo base64 não encontrada em logo.svg")
 
           image = Image.open(BytesIO(base64.b64decode(match.group(1)))).convert("RGBA")
-          sizes = {
+          bbox = image.getbbox()
+          if bbox:
+              image = image.crop(bbox)
+
+          legacy_sizes = {
               "mipmap-mdpi": 48,
               "mipmap-hdpi": 72,
               "mipmap-xhdpi": 96,
@@ -74,13 +78,33 @@ jobs:
               "mipmap-xxxhdpi": 192,
           }
 
-          for folder, size in sizes.items():
+          def fit_logo(canvas_size, ratio, background):
+              canvas = Image.new("RGBA", (canvas_size, canvas_size), background)
+              max_size = int(canvas_size * ratio)
+              logo = image.copy()
+              logo.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+              x = (canvas_size - logo.width) // 2
+              y = (canvas_size - logo.height) // 2
+              canvas.alpha_composite(logo, (x, y))
+              return canvas
+
+          for folder, size in legacy_sizes.items():
               target = Path("android/app/src/main/res") / folder
               target.mkdir(parents=True, exist_ok=True)
-              resized = image.resize((size, size), Image.Resampling.LANCZOS)
-              resized.save(target / "ic_launcher.png")
-              resized.save(target / "ic_launcher_round.png")
-              resized.save(target / "ic_launcher_foreground.png")
+
+              legacy = fit_logo(size, 0.76, (21, 63, 29, 255))
+              legacy.save(target / "ic_launcher.png")
+              legacy.save(target / "ic_launcher_round.png")
+
+              foreground = fit_logo(size, 0.60, (0, 0, 0, 0))
+              foreground.save(target / "ic_launcher_foreground.png")
+
+          values = Path("android/app/src/main/res/values")
+          values.mkdir(parents=True, exist_ok=True)
+          (values / "ic_launcher_background.xml").write_text(
+              '<resources><color name="ic_launcher_background">#153F1D</color></resources>',
+              encoding="utf-8"
+          )
           PY
 
       - name: Build debug APK
