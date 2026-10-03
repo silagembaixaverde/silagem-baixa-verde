@@ -922,18 +922,67 @@ window.editProduct=id=>{const isNew=id==='NEW',p=isNew?{id:uid(),name:'',details
 <div class="field"><label>Custo unitário</label><input name="unit_cost" type="number" step=".01" value="${p.unit_cost}"></div><div class="field full"><label>Descrição completa</label><textarea name="details">${esc(p.details)}</textarea></div>
 <div class="field full"><label>Observações internas</label><textarea name="notes">${esc(p.notes)}</textarea></div></form><div class="actions"><button class="secondary" onclick="go('products')">Cancelar</button><button class="primary" id="sp">Salvar</button></div></div>`;sp.onclick=()=>{if(!pf.reportValidity())return;const old=p.name,o=Object.fromEntries(new FormData(pf));Object.assign(p,o,{sale_price:Number(o.sale_price||0),unit_cost:Number(o.unit_cost||0)});if(isNew)db.products.push(p);else if(old!==p.name){db.sales.forEach(s=>{if(s.product===old)s.product=p.name});db.inventory.forEach(i=>{if(i.product===old)i.product=p.name})}save();go('products')}}
 
-function customers(){
- title('Clientes','Abra e edite os dados completos.');
- content.innerHTML=`<div class="toolbar"><button class="primary" onclick="editCustomer('NEW')">+ Novo cliente</button><input id="cs" placeholder="Pesquisar..."></div><div id="cb"></div>`;
- function draw(){const z=cs.value.toLowerCase(),r=db.customers.filter(c=>JSON.stringify(c).toLowerCase().includes(z)).sort((a,b)=>a.name.localeCompare(b.name));cb.innerHTML=table(r,['Cliente','CPF/CNPJ','Telefone','Cidade','Ação'],c=>[c.name,c.cpf_cnpj||'—',c.phone||'—',c.city||'—',`<button class="secondary" onclick="editCustomer('${c.id}')">Ver / editar</button>`])}cs.oninput=draw;draw()
+function customerUsageStats(name){
+ const sales=db.sales
+   .filter(s=>String(s.customer||'').trim().toLocaleLowerCase('pt-BR')===String(name||'').trim().toLocaleLowerCase('pt-BR'))
+   .filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s.date||'')))
+   .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ if(sales.length<2)return {avgDays:null,daily:null,purchases:sales.length};
+ const dates=sales.map(s=>new Date(s.date+'T12:00:00'));
+ const gaps=[];
+ for(let i=1;i<dates.length;i++){
+   const d=(dates[i]-dates[i-1])/(1000*60*60*24);
+   if(Number.isFinite(d)&&d>0)gaps.push(d);
+ }
+ const avgDays=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:null;
+ const span=(dates[dates.length-1]-dates[0])/(1000*60*60*24);
+ const priorQty=sales.slice(0,-1).reduce((a,s)=>a+Number(s.quantity||0),0);
+ const daily=span>0&&priorQty>0?priorQty/span:null;
+ return {avgDays,daily,purchases:sales.length};
 }
-window.editCustomer=id=>{const isNew=id==='NEW',c=isNew?{id:uid(),name:'',cpf_cnpj:'',phone:'',email:'',address:'',number:'',complement:'',neighborhood:'',city:'',state:'',zip:'',type:'',notes:''}:db.customers.find(x=>x.id===id);if(!c)return;title(isNew?'Novo cliente':'Dados do cliente');content.innerHTML=`<div class="card"><form id="cf">
+function customers(){
+ title('Clientes','Abra e edite os dados completos e acompanhe o padrão de compra.');
+ content.innerHTML=`<div class="toolbar"><button class="primary" onclick="editCustomer('NEW')">+ Novo cliente</button><input id="cs" placeholder="Pesquisar..."></div><div id="cb"></div>`;
+ function draw(){
+   const z=cs.value.toLowerCase();
+   const r=db.customers.filter(c=>JSON.stringify(c).toLowerCase().includes(z)).sort((a,b)=>a.name.localeCompare(b.name));
+   cb.innerHTML=table(r,['Cliente','CPF/CNPJ','Telefone','Cidade','Média entre compras','Uso médio/dia','Ação'],c=>{
+     const st=customerUsageStats(c.name);
+     return [
+       c.name,
+       c.cpf_cnpj||'—',
+       c.phone||'—',
+       c.city||'—',
+       st.avgDays!=null?`${st.avgDays.toFixed(1).replace('.',',')} dias`:'Sem histórico suficiente',
+       st.daily!=null?`${st.daily.toFixed(2).replace('.',',')} un./dia`:'Sem histórico suficiente',
+       `<button class="secondary" onclick="editCustomer('${c.id}')">Ver / editar</button>`
+     ];
+   })
+ }
+ cs.oninput=draw;
+ draw()
+}
+window.editCustomer=id=>{
+ const isNew=id==='NEW',
+ c=isNew?{id:uid(),name:'',cpf_cnpj:'',phone:'',email:'',address:'',number:'',complement:'',neighborhood:'',city:'',state:'',zip:'',type:'',notes:''}:db.customers.find(x=>x.id===id);
+ if(!c)return;
+ const st=customerUsageStats(c.name);
+ title(isNew?'Novo cliente':'Dados do cliente');
+ content.innerHTML=`<div class="card">
+ ${!isNew?`<div class="grid" style="margin-bottom:16px">
+   ${metric('Compras registradas',st.purchases,'Histórico deste cliente')}
+   ${metric('Média entre compras',st.avgDays!=null?st.avgDays.toFixed(1).replace('.',',')+' dias':'—',st.avgDays!=null?'Intervalo médio de reposição':'Sem histórico suficiente')}
+   ${metric('Uso médio diário',st.daily!=null?st.daily.toFixed(2).replace('.',',')+' un./dia':'—',st.daily!=null?'Estimativa baseada no histórico':'Sem histórico suficiente')}
+ </div>`:''}
+ <form id="cf">
 <div class="field span2"><label>Nome / Razão social</label><input name="name" value="${esc(c.name)}" required></div><div class="field"><label>CPF/CNPJ</label><input name="cpf_cnpj" value="${esc(c.cpf_cnpj)}"></div>
 <div class="field"><label>Telefone / WhatsApp</label><input name="phone" value="${esc(c.phone)}"></div><div class="field"><label>E-mail</label><input name="email" value="${esc(c.email)}"></div>
 <div class="field span2"><label>Endereço</label><input name="address" value="${esc(c.address)}"></div><div class="field"><label>Número</label><input name="number" value="${esc(c.number)}"></div>
 <div class="field"><label>Complemento</label><input name="complement" value="${esc(c.complement)}"></div><div class="field"><label>Bairro</label><input name="neighborhood" value="${esc(c.neighborhood)}"></div>
 <div class="field"><label>Cidade</label><input name="city" value="${esc(c.city)}"></div><div class="field"><label>Estado</label><input name="state" value="${esc(c.state)}"></div><div class="field"><label>CEP</label><input name="zip" value="${esc(c.zip)}"></div>
-<div class="field full"><label>Observações</label><textarea name="notes">${esc(c.notes)}</textarea></div></form><div class="actions"><button class="secondary" onclick="go('customers')">Cancelar</button><button class="primary" id="sc">Salvar</button></div></div>`;sc.onclick=()=>{if(!cf.reportValidity())return;Object.assign(c,Object.fromEntries(new FormData(cf)));if(isNew)db.customers.push(c);save();go('customers')}}
+<div class="field full"><label>Observações</label><textarea name="notes">${esc(c.notes)}</textarea></div></form><div class="actions"><button class="secondary" onclick="go('customers')">Cancelar</button><button class="primary" id="sc">Salvar</button></div></div>`;
+ sc.onclick=()=>{if(!cf.reportValidity())return;Object.assign(c,Object.fromEntries(new FormData(cf)));if(isNew)db.customers.push(c);save();go('customers')}
+}
 
 function expenses(){
  title('Gastos','Controle o que já foi pago e o que ainda está a pagar.');
