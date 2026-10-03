@@ -46,6 +46,19 @@
     if(el.condition)el.condition.textContent=weatherText[data.current&&data.current.weather_code]||'Clima atual';
   }
 
+  async function reversePlace(lat,lon){
+    try{
+      const r=await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+encodeURIComponent(lat)+'&longitude='+encodeURIComponent(lon)+'&localityLanguage=pt',{cache:'no-store'});
+      if(!r.ok)throw new Error('reverse');
+      const d=await r.json();
+      const city=d.city||d.locality||d.principalSubdivision||'Local atual';
+      const state=d.principalSubdivisionCode?String(d.principalSubdivisionCode).split('-').pop():(d.principalSubdivision||'');
+      return [city,state].filter(Boolean).join(' - ');
+    }catch(e){
+      return 'Local atual';
+    }
+  }
+
   async function weatherByCity(){
     const loc=fallbackLocation();
     const el=getWidget();
@@ -66,7 +79,21 @@
   }
 
   function refreshWeather(){
-    weatherByCity();
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(async function(pos){
+        try{
+          const lat=pos.coords.latitude,lon=pos.coords.longitude;
+          const label=await reversePlace(lat,lon);
+          await weatherByCoords(lat,lon,label);
+        }catch(e){
+          weatherByCity();
+        }
+      },function(){
+        weatherByCity();
+      },{enableHighAccuracy:false,timeout:6000,maximumAge:30*60*1000});
+    }else{
+      weatherByCity();
+    }
   }
 
   function init(){
