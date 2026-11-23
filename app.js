@@ -157,12 +157,21 @@ function showCloudLogin(message=''){
     <div class="field" style="margin-top:12px"><label>Senha da nuvem</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Mínimo 6 caracteres"></div>
     <div id="cloudLoginMsg" style="font-size:13px;margin-top:12px;color:${message?'#a52319':'#6d776e'}">${message||'Use a mesma conta no computador e no celular.'}</div>
     <button class="primary" id="cloudSignIn" style="width:100%;margin-top:18px">Entrar e sincronizar</button>
+    <button class="secondary" id="cloudForgotPassword" style="width:100%;margin-top:9px">Esqueci minha senha</button>
     <button class="secondary" id="cloudSignUp" style="width:100%;margin-top:9px">Criar minha conta</button>
   </div>
  </div>`);
  const email=document.getElementById('cloudEmail');
  const pass=document.getElementById('cloudPassword');
  const msg=document.getElementById('cloudLoginMsg');
+ document.getElementById('cloudForgotPassword').onclick=async()=>{
+   if(!email.value.trim()){msg.textContent='Informe seu e-mail para receber o link de recuperação.';msg.style.color='#a52319';email.focus();return}
+   msg.textContent='Enviando link de recuperação...';msg.style.color='#6d776e';
+   const {error}=await cloudClient.auth.resetPasswordForEmail(email.value.trim(),{redirectTo:window.location.origin+window.location.pathname});
+   if(error){msg.textContent='Não foi possível enviar o link: '+error.message;msg.style.color='#a52319';return}
+   msg.textContent='Se esse e-mail estiver cadastrado, enviaremos um link para redefinir a senha. Confira também o spam.';
+   msg.style.color='#267a36';
+ };
  document.getElementById('cloudSignIn').onclick=async()=>{
    if(!email.value||!pass.value){msg.textContent='Informe e-mail e senha.';msg.style.color='#a52319';return}
    msg.textContent='Entrando...';msg.style.color='#6d776e';
@@ -1203,13 +1212,43 @@ ${db.settings.address?`<p><b>Endereço:</b> ${esc([db.settings.address,db.settin
 ${db.settings.document_footer?`<p style="margin-top:20px;color:#6d776e"><small>${esc(db.settings.document_footer)}</small></p>`:''}
 <div class="actions"><button class="secondary" onclick="window.print()">Imprimir / PDF</button><button class="primary" onclick="shareReceiptPdf('${s.id}','${num}')">Enviar PDF pelo WhatsApp</button></div></div>`}
 
+function showCloudPasswordRecovery(){
+ document.getElementById('cloudLoginOverlay')?.remove();
+ document.getElementById('cloudPasswordRecovery')?.remove();
+ document.body.insertAdjacentHTML('beforeend',`<div id="cloudPasswordRecovery" style="position:fixed;inset:0;background:#0f2614;z-index:100001;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div class="card" style="width:min(460px,100%);padding:28px">
+   <h2>Definir nova senha</h2>
+   <p style="color:#6d776e">Crie uma nova senha para sua conta da nuvem.</p>
+   <div class="field"><label>Nova senha</label><input id="newCloudPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
+   <div class="field" style="margin-top:12px"><label>Confirmar nova senha</label><input id="confirmCloudPassword" type="password" autocomplete="new-password" placeholder="Repita a nova senha"></div>
+   <div id="cloudRecoveryMsg" style="font-size:13px;margin-top:12px;color:#6d776e"></div>
+   <button class="primary" id="saveCloudPassword" style="width:100%;margin-top:18px">Salvar nova senha</button>
+  </div>
+ </div>`);
+ document.getElementById('saveCloudPassword').onclick=async()=>{
+   const password=document.getElementById('newCloudPassword').value;
+   const confirm=document.getElementById('confirmCloudPassword').value;
+   const msg=document.getElementById('cloudRecoveryMsg');
+   if(password.length<6){msg.textContent='A senha precisa ter pelo menos 6 caracteres.';msg.style.color='#a52319';return}
+   if(password!==confirm){msg.textContent='As senhas não conferem.';msg.style.color='#a52319';return}
+   msg.textContent='Salvando...';msg.style.color='#6d776e';
+   const {error}=await cloudClient.auth.updateUser({password});
+   if(error){msg.textContent='Não foi possível alterar a senha: '+error.message;msg.style.color='#a52319';return}
+   history.replaceState(null,document.title,window.location.pathname+window.location.search);
+   document.getElementById('cloudPasswordRecovery')?.remove();
+   const {data:{session}}=await cloudClient.auth.getSession();
+   if(session)await finishCloudLogin(session);else showCloudLogin('Senha alterada. Entre com sua nova senha.');
+ };
+}
 async function start(){
  db=migrate(INITIAL);
  renderNav();
  applySettings();
  setCloudStatus('Conectando...',true);
  const {data:{session}}=await cloudClient.auth.getSession();
- if(session){
+ if(session&&new URLSearchParams(window.location.hash.replace(/^#/,'')).get('type')==='recovery'){
+   showCloudPasswordRecovery();
+ }else if(session){
    await finishCloudLogin(session);
  }else{
    setCloudStatus('Login necessário',false);
